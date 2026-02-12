@@ -1,448 +1,499 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Zignal Agency Dashboard v3.2 (Stable)</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Zignal Agency | Creative Dashboard</title>
+    
+    <!-- React & ReactDOM -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    
+    <!-- Babel -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@0.292.0/dist/umd/lucide.min.js"></script>
 
-  <!-- LIBRERÍAS ESTRATÉGICAS -->
-  <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
-  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
-  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 
-  <!-- CONFIGURACIÓN DE MARCA -->
-  <script>
-    tailwind.config = {
-      theme: {
-        extend: {
-          colors: {
-            zignal: {
-              blue: '#0066FF',
-              cyan: '#00E5FF',
-              dark: '#0B1120',
-              light: '#F0F9FF',
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    },
+                    colors: {
+                        zignal: {
+                            blue: '#0066FF',
+                            cyan: '#00E5FF',
+                            dark: '#0B1120',
+                            light: '#F0F9FF',
+                            gray: '#1E293B',
+                            danger: '#EF4444'
+                        }
+                    }
+                }
             }
-          }
         }
-      }
-    }
-  </script>
+    </script>
 
-  <style>
-    body { background-color: #F8FAFC; margin: 0; font-family: 'Segoe UI', system-ui, sans-serif; }
-    .brand-logo:hover { transform: scale(1.05); transition: transform 0.3s; }
-    .animate-fade-in { animation: fadeIn 0.3s ease-out; }
-    @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-    .table-header { @apply px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider bg-slate-50 border-b border-slate-200; }
-    .table-cell { @apply px-6 py-4 text-sm text-slate-600 border-b border-slate-100 align-top; }
-  </style>
+    <style>
+        body { background-color: #F8FAFC; -webkit-tap-highlight-color: transparent; }
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.5);
+        }
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: #f1f1f1; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        
+        .fade-in { animation: fadeIn 0.3s ease-in-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        
+        .calendar-day:active { transform: scale(0.98); }
+        
+        /* Mobile optimizaciones */
+        input, select, textarea { font-size: 16px !important; } /* Previene zoom en iOS */
+    </style>
 </head>
-<body>
+<body class="text-slate-800 antialiased pb-10">
+    <div id="root"></div>
 
-  <div id="root"></div>
+    <script type="text/babel">
+        const { useState, useEffect, useMemo, useRef } = React;
 
-  <script type="text/babel">
+        // --- Mock Data ---
+        const initialData = [
+            { id: 1, dateRequest: '2026-02-10', requester: 'Dept. Publicidad', campaignName: 'Lanzamiento Q1', format: 'Reel', location: 'Instagram', description: 'Video dinámico mostrando los nuevos productos.', referenceLink: 'https://drive.google.com/ejemplo', deadline: '2026-02-15', includedInPlan: true, price: 0, status: 'In Progress', priority: 'High' },
+            { id: 2, dateRequest: '2026-02-11', requester: 'Zignal', campaignName: 'Promo San Valentín', format: 'Email', location: 'Email', description: 'Newsletter con descuentos.', referenceLink: '', deadline: '2026-02-13', includedInPlan: true, price: 0, status: 'Pending', priority: 'Medium' },
+            { id: 3, dateRequest: '2026-02-05', requester: 'Extra', campaignName: 'Evento Corporativo', format: 'Impreso', location: 'Brochure', description: 'Diseño de tríptico.', referenceLink: '', deadline: '2026-02-20', includedInPlan: false, price: 500, status: 'Waiting Approval', priority: 'Low' },
+            { id: 4, dateRequest: '2026-01-20', requester: 'Junta Directiva', campaignName: 'Reporte Anual', format: 'Post', location: 'LinkedIn', description: 'Resumen de logros.', referenceLink: '', deadline: '2026-01-30', includedInPlan: true, price: 0, status: 'Finalized', priority: 'High' },
+        ];
 
-    const { useState, useMemo, useEffect } = React;
-
-    // --- COMPONENTE ICONO (CORREGIDO PARA EVITAR ERROR DE RENDERIZADO) ---
-    const Icon = ({ name, size = 18, className }) => {
-      // Accedemos a la librería global de Lucide
-      const lucideGlobal = window.lucide;
-      
-      // Si no ha cargado o el icono no existe, no rompemos la app
-      if (!lucideGlobal || !lucideGlobal.icons || !lucideGlobal.icons[name]) {
-        return null; 
-      }
-
-      const iconData = lucideGlobal.icons[name];
-
-      // Renderizamos el SVG manualmente usando los datos del icono
-      return (
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          width={size}
-          height={size}
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          className={className}
-        >
-          {iconData.map(([tag, attrs], i) => (
-            React.createElement(tag, { key: i, ...attrs })
-          ))}
-        </svg>
-      );
-    };
-
-    // --- API IA ---
-    const apiKey = ""; 
-    const GEMINI_MODEL = "gemini-2.5-flash-preview-09-2025";
-
-    async function callGemini(prompt) {
-      try {
-        const response = await fetch(
-          `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${apiKey}`,
-          { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] }) }
-        );
-        if (!response.ok) throw new Error("Error API");
-        const data = await response.json();
-        return data.candidates?.[0]?.content?.parts?.[0]?.text || "Sin respuesta.";
-      } catch (error) { console.error(error); return "⚠️ Error de conexión con IA."; }
-    }
-
-    // --- DATOS INICIALES ---
-    const INITIAL_DATA = [
-      { id: 1, dateRequest: '2026-02-10', requester: 'Ventas', campaignName: 'Promo Enamorados', format: 'Carrusel', location: 'IG / FB', description: 'Oferta 2x$3.95 (30ml).', referenceLink: 'https://drive.google.com', deadline: '2026-02-11', includedInPlan: true, price: '', status: 'In Progress', priority: 'High' },
-      { id: 2, dateRequest: '2026-02-10', requester: 'Ventas', campaignName: 'Taglines Amor', format: 'Impreso', location: 'Fuera de Redes', description: 'Etiquetas 2x7cm.', referenceLink: '', deadline: '2026-02-11', includedInPlan: false, price: '45.00', status: 'Pending', priority: 'Medium' },
-      { id: 3, dateRequest: '2026-02-01', requester: 'Zignal Agency', campaignName: 'Portafolio Nuevo', format: 'Presentación PDF', location: 'Email', description: 'Propuesta comercial.', referenceLink: '', deadline: '2026-02-05', includedInPlan: true, price: '', status: 'Finalized', priority: 'High' }
-    ];
-
-    // --- APP PRINCIPAL ---
-    const App = () => {
-      const [requests, setRequests] = useState(INITIAL_DATA);
-      const [showForm, setShowForm] = useState(false);
-      const [filter, setFilter] = useState('All');
-      const [editingId, setEditingId] = useState(null);
-      
-      // ESTADOS DE MODALES
-      const [deleteModalOpen, setDeleteModalOpen] = useState(false);
-      const [itemToDelete, setItemToDelete] = useState(null);
-      const [formError, setFormError] = useState("");
-      
-      // IA States
-      const [isAiGenerating, setIsAiGenerating] = useState(false);
-      const [aiModalOpen, setAiModalOpen] = useState(false);
-      const [aiContent, setAiContent] = useState(null);
-
-      // Form State
-      const initialFormState = {
-        requester: 'Zignal Agency', campaignName: '', format: 'Post 1080x1080', location: 'IG / FB', description: '', referenceLink: '',
-        dateRequest: new Date().toISOString().split('T')[0], deadline: '', includedInPlan: true, price: '', priority: 'Medium', status: 'Pending'
-      };
-      const [formData, setFormData] = useState(initialFormState);
-      const [isSaving, setIsSaving] = useState(false);
-
-      // --- FILTROS ---
-      const activeRequests = useMemo(() => {
-        let filtered = requests.filter(r => r.status !== 'Approved' && r.status !== 'Finalized');
-        return filter === 'All' ? filtered : filtered.filter(r => r.requester === filter);
-      }, [requests, filter]);
-
-      const historyRequests = useMemo(() => {
-        let filtered = requests.filter(r => r.status === 'Approved' || r.status === 'Finalized');
-        return filter === 'All' ? filtered : filtered.filter(r => r.requester === filter);
-      }, [requests, filter]);
-
-      // --- HANDLERS ---
-      const handleInputChange = (e) => {
-        const { name, value, type, checked } = e.target;
-        setFormData(prev => ({ ...prev, [name]: type === 'checkbox' ? checked : value }));
-        if (formError) setFormError("");
-      };
-
-      const openForm = (req = null) => {
-        setFormError("");
-        if (req) {
-          setEditingId(req.id);
-          setFormData({ ...req, price: req.price || '' });
-        } else {
-          setEditingId(null);
-          setFormData(initialFormState);
-        }
-        setShowForm(true);
-      };
-
-      const handleSubmit = async (e) => {
-        e.preventDefault();
-        if (!formData.campaignName.trim()) { setFormError("⚠️ Falta el Nombre de la Campaña"); return; }
-        if (!formData.deadline) { setFormError("⚠️ Falta la Fecha de Entrega"); return; }
-
-        setIsSaving(true);
-        await new Promise(r => setTimeout(r, 400));
-
-        if (editingId) {
-          setRequests(prev => prev.map(r => r.id === editingId ? { ...r, ...formData } : r));
-        } else {
-          setRequests(prev => [{ id: Date.now(), ...formData }, ...prev]);
-        }
-
-        setIsSaving(false);
-        setShowForm(false);
-      };
-
-      const confirmDelete = (id) => {
-        setItemToDelete(id);
-        setDeleteModalOpen(true);
-      };
-
-      const executeDelete = () => {
-        if (itemToDelete) {
-          setRequests(prev => prev.filter(r => r.id !== itemToDelete));
-          setDeleteModalOpen(false);
-          setItemToDelete(null);
-        }
-      };
-
-      // --- IA ---
-      const handleGenerateIdeas = async (req) => {
-        setAiModalOpen(true);
-        setIsAiGenerating(true);
-        const res = await callGemini(`Dame 3 ideas de copy para: ${req.campaignName} (${req.description})`);
-        setAiContent(res);
-        setIsAiGenerating(false);
-      };
-
-      const handleEnhanceBrief = async () => {
-        if (!formData.campaignName) { setFormError("Escribe un nombre primero"); return; }
-        setIsAiGenerating(true);
-        const res = await callGemini(`Mejora este brief: ${formData.description} para ${formData.campaignName}`);
-        setFormData(prev => ({ ...prev, description: res }));
-        setIsAiGenerating(false);
-      };
-
-      // UI Helpers
-      const getStatusBadge = (s) => {
-        const styles = {
-          'Pending': 'bg-slate-100 text-slate-600', 'In Progress': 'bg-blue-50 text-blue-600 border-blue-200',
-          'In Review': 'bg-purple-50 text-purple-600 border-purple-200', 'Waiting Approval': 'bg-orange-50 text-orange-600 border-orange-200',
-          'Approved': 'bg-green-100 text-green-700 border-green-200', 'Finalized': 'bg-slate-800 text-white',
-          'On Hold': 'bg-amber-50 text-amber-700 border-amber-200'
+        const initialEvents = {
+            '2026-02-14': [{ text: 'San Valentín', type: 'holiday' }],
+            '2026-02-28': [{ text: 'Cierre de Mes', type: 'admin' }],
+            '2026-03-08': [{ text: 'Día de la Mujer', type: 'holiday' }],
+            '2026-04-01': [{ text: 'Inicio Q2', type: 'campaign' }]
         };
-        return <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase border whitespace-nowrap ${styles[s]}`}>{s === 'Finalized' ? '🏁 Finalizado' : s === 'Approved' ? '✅ Aprobado' : s}</span>;
-      };
 
-      return (
-        <div className="min-h-screen pb-20">
-          
-          {/* NAVBAR */}
-          <nav className="bg-white border-b border-slate-200 sticky top-0 z-30 shadow-sm backdrop-blur-md bg-white/95">
-            <div className="max-w-7xl mx-auto px-4 h-20 flex justify-between items-center">
-              <div className="flex items-center gap-4">
-                <div className="flex flex-col brand-logo cursor-pointer group">
-                  <span className="text-3xl font-black text-zignal-blue tracking-tighter leading-none group-hover:text-zignal-cyan transition-colors">zignal</span>
-                  <span className="text-[10px] font-bold text-slate-400 tracking-[0.4em] uppercase group-hover:text-zignal-blue transition-colors">Agency</span>
-                </div>
-                <div className="h-8 w-px bg-slate-200 mx-2 hidden md:block"></div>
-                <span className="text-slate-400 font-medium text-sm hidden md:block">Sistema de Gestión Creativa</span>
-              </div>
-              <button onClick={() => openForm()} className="bg-zignal-blue hover:bg-blue-700 text-white px-5 py-2.5 rounded-xl font-bold shadow-lg transition-all flex items-center gap-2 active:scale-95">
-                <Icon name="PlusCircle" size={20} /> <span className="hidden sm:inline">Nueva Solicitud</span>
-              </button>
-            </div>
-          </nav>
+        // --- Simulación IA ---
+        const callGemini = async (prompt) => {
+            return new Promise((resolve) => {
+                setTimeout(() => {
+                    const responses = [
+                        "Sugiero usar colores vibrantes y tipografía bold para destacar este mensaje.",
+                        "Idea: Crear una serie de 3 posts conectada visualmente (carrusel).",
+                        "Para este formato impreso, recuerda dejar márgenes de seguridad de 3mm.",
+                        "Optimizado: 'Impacta visualmente con un diseño minimalista y llamada a la acción clara.'"
+                    ];
+                    resolve(responses[Math.floor(Math.random() * responses.length)]);
+                }, 1000);
+            });
+        };
 
-          <div className="max-w-7xl mx-auto px-4 py-8 space-y-10">
+        // --- Icon Component ---
+        const Icon = ({ name, size = 18, className = "" }) => {
+            const svgContent = React.useMemo(() => {
+                if (!window.lucide || !window.lucide.icons || !window.lucide.icons[name]) return null;
+                try {
+                    const element = window.lucide.createElement(window.lucide.icons[name]);
+                    element.setAttribute('width', size);
+                    element.setAttribute('height', size);
+                    const existingClass = element.getAttribute('class') || '';
+                    element.setAttribute('class', `${existingClass} ${className}`.trim());
+                    return { __html: element.outerHTML };
+                } catch (err) { return null; }
+            }, [name, size, className]);
+
+            if (!svgContent) return <span style={{width: size, height: size}} className={`inline-block bg-gray-200 rounded ${className}`} />;
+            return <span dangerouslySetInnerHTML={svgContent} className="inline-flex items-center justify-center" />;
+        };
+
+        // --- Calendar Month ---
+        const CalendarMonth = ({ year, month, events, onAddEvent }) => {
+            const date = new Date(year, month, 1);
+            const monthName = date.toLocaleString('es-ES', { month: 'long' });
+            const daysInMonth = new Date(year, month + 1, 0).getDate();
+            const startDay = date.getDay(); // 0 = Sunday
+
+            const getEventStyle = (type) => {
+                switch(type) {
+                    case 'holiday': return 'bg-red-50 text-red-700 border border-red-200';
+                    case 'campaign': return 'bg-green-50 text-green-700 border border-green-200';
+                    case 'task-start': return 'bg-purple-50 text-purple-700 border border-purple-200';
+                    case 'task-end': return 'bg-orange-50 text-orange-800 border border-orange-200 font-semibold';
+                    default: return 'bg-blue-50 text-blue-700 border border-blue-200';
+                }
+            };
+
+            const days = [];
+            for (let i = 0; i < startDay; i++) days.push(<div key={`empty-${i}`} className="h-24 md:h-28 bg-gray-50/30"></div>);
             
-            {/* KPI STATS */}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 animate-fade-in">
-              {[
-                { l: 'Activos', v: activeRequests.length, i: 'Activity', c: 'text-zignal-blue', bg: 'bg-blue-50' },
-                { l: 'Historial', v: historyRequests.length, i: 'Archive', c: 'text-slate-700', bg: 'bg-slate-100' },
-                { l: 'Urgentes', v: requests.filter(r => r.priority === 'High' && r.status !== 'Finalized').length, i: 'AlertCircle', c: 'text-red-500', bg: 'bg-red-50' },
-                { l: 'Extras', v: requests.filter(r => !r.includedInPlan).length, i: 'DollarSign', c: 'text-amber-500', bg: 'bg-amber-50' }
-              ].map((k, i) => (
-                <div key={i} className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm flex justify-between items-center">
-                  <div><p className="text-xs font-bold text-slate-400 uppercase">{k.l}</p><p className={`text-3xl font-black ${k.c}`}>{k.v}</p></div>
-                  <div className={`p-3 rounded-xl ${k.bg} ${k.c}`}><Icon name={k.i} /></div>
-                </div>
-              ))}
-            </div>
-
-            {/* ACTIVOS */}
-            <div className="animate-fade-in">
-              <div className="flex flex-col sm:flex-row justify-between items-end mb-4 gap-4">
-                <h2 className="text-xl font-black text-slate-800 flex items-center gap-2"><Icon name="Zap" className="text-zignal-blue"/> Requerimientos Activos</h2>
-                <div className="bg-white border rounded-lg px-3 py-2 flex items-center gap-2 shadow-sm">
-                  <Icon name="Filter" size={14} className="text-slate-400"/>
-                  <select value={filter} onChange={e => setFilter(e.target.value)} className="bg-transparent border-none text-sm text-slate-600 font-medium focus:ring-0 cursor-pointer outline-none">
-                    <option value="All">Todos los Departamentos</option>
-                    <option value="Zignal Agency">Zignal Agency</option>
-                    <option value="Ventas">Ventas</option>
-                    <option value="RRHH">RRHH</option>
-                    <option value="Social">Social</option>
-                  </select>
-                </div>
-              </div>
-
-              <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-                <div className="overflow-x-auto">
-                  <table className="w-full">
-                    <thead><tr><th className="table-header">Campaña</th><th className="table-header">Fechas</th><th className="table-header">Estatus</th><th className="table-header text-center">Acciones</th></tr></thead>
-                    <tbody>
-                      {activeRequests.length === 0 ? <tr><td colSpan="4" className="p-10 text-center text-slate-400">Todo al día 🎉</td></tr> : activeRequests.map(req => (
-                        <tr key={req.id} className="hover:bg-slate-50 transition-colors">
-                          <td className="table-cell">
-                            <div className="font-bold text-slate-800">{req.campaignName}</div>
-                            <div className="text-xs text-slate-500 mt-1 truncate max-w-[200px]">{req.description}</div>
-                            <div className="flex gap-2 mt-2">
-                              <span className="bg-slate-100 text-slate-600 text-[10px] px-2 py-0.5 rounded uppercase font-bold">{req.requester}</span>
-                              {!req.includedInPlan && <span className="bg-amber-100 text-amber-700 text-[10px] px-2 py-0.5 rounded font-bold border border-amber-200">EXTRA</span>}
-                            </div>
-                          </td>
-                          <td className="table-cell">
-                            <div className="flex flex-col gap-1 text-xs">
-                              <div className="text-slate-400">Sol: {req.dateRequest}</div>
-                              <div className="text-zignal-blue font-bold">Ent: {req.deadline}</div>
-                            </div>
-                          </td>
-                          <td className="table-cell">{getStatusBadge(req.status)}</td>
-                          <td className="table-cell text-center">
-                            <div className="flex justify-center gap-2">
-                              <button onClick={() => handleGenerateIdeas(req)} className="p-2 bg-purple-50 text-purple-600 rounded hover:bg-purple-100 transition-colors"><Icon name="Sparkles"/></button>
-                              <button onClick={() => openForm(req)} className="p-2 bg-blue-50 text-blue-600 rounded hover:bg-blue-100 transition-colors"><Icon name="Edit"/></button>
-                              <button onClick={() => confirmDelete(req.id)} className="p-2 bg-red-50 text-red-600 rounded hover:bg-red-100 transition-colors"><Icon name="Trash2"/></button>
-                            </div>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            </div>
-
-            {/* HISTORIAL */}
-            <div className="animate-fade-in opacity-90">
-              <h2 className="text-xl font-black text-slate-400 flex items-center gap-2 mb-4"><Icon name="CheckCircle" className="text-green-500"/> Historial</h2>
-              <div className="bg-slate-50 rounded-2xl shadow-inner border border-slate-200 overflow-hidden">
-                <table className="w-full">
-                  <thead><tr><th className="table-header bg-slate-100">Proyecto</th><th className="table-header bg-slate-100">Fechas</th><th className="table-header bg-slate-100">Final</th><th className="table-header bg-slate-100 text-center">Gestión</th></tr></thead>
-                  <tbody>
-                    {historyRequests.length === 0 ? <tr><td colSpan="4" className="p-8 text-center text-slate-400 italic">Sin historial aún.</td></tr> : historyRequests.map(req => (
-                      <tr key={req.id} className="border-b border-slate-200 bg-slate-50/50">
-                        <td className="table-cell"><span className="font-bold text-slate-600 line-through decoration-slate-400">{req.campaignName}</span></td>
-                        <td className="table-cell text-xs font-mono">Ent: {req.deadline}</td>
-                        <td className="table-cell">{getStatusBadge(req.status)}</td>
-                        <td className="table-cell text-center">
-                          <button onClick={() => openForm(req)} className="text-slate-400 hover:text-blue-500 mr-2"><Icon name="RotateCcw" size={16}/></button>
-                          <button onClick={() => confirmDelete(req.id)} className="text-slate-300 hover:text-red-500"><Icon name="Trash2" size={16}/></button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-
-          </div>
-
-          {/* --- MODAL DE BORRAR --- */}
-          {deleteModalOpen && (
-            <div className="fixed inset-0 bg-zignal-dark/80 backdrop-blur-sm z-[70] flex items-center justify-center p-4">
-              <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6 text-center animate-fade-in">
-                <div className="bg-red-100 text-red-600 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <Icon name="Trash2" size={32}/>
-                </div>
-                <h3 className="text-xl font-bold text-slate-800 mb-2">¿Eliminar Solicitud?</h3>
-                <p className="text-sm text-slate-500 mb-6">Esta acción no se puede deshacer. Se borrará del registro permanentemente.</p>
-                <div className="flex gap-3 justify-center">
-                  <button onClick={() => setDeleteModalOpen(false)} className="px-5 py-2.5 bg-white border border-slate-300 rounded-xl font-bold text-slate-600 hover:bg-slate-50">Cancelar</button>
-                  <button onClick={executeDelete} className="px-5 py-2.5 bg-red-500 text-white rounded-xl font-bold hover:bg-red-600 shadow-lg shadow-red-200">Sí, Borrar</button>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* --- MODAL FORMULARIO --- */}
-          {showForm && (
-            <div className="fixed inset-0 bg-zignal-dark/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-              <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto animate-fade-in">
-                <div className="p-6 border-b border-slate-100 flex justify-between items-center sticky top-0 bg-white z-10">
-                  <h3 className="text-xl font-black text-slate-800">{editingId ? 'Editar' : 'Nueva'} Solicitud</h3>
-                  <button onClick={() => setShowForm(false)} className="bg-slate-100 p-2 rounded-full hover:bg-slate-200"><Icon name="X" className="text-slate-500"/></button>
-                </div>
+            for (let i = 1; i <= daysInMonth; i++) {
+                const dayKey = `${year}-${String(month + 1).padStart(2, '0')}-${String(i).padStart(2, '0')}`;
+                const dayEvents = events[dayKey] || [];
                 
-                <form onSubmit={handleSubmit} className="p-8 space-y-6">
-                  {/* Mensaje de Error Visible */}
-                  {formError && (
-                    <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl flex items-center gap-2 text-sm font-bold animate-pulse">
-                      <Icon name="AlertCircle" size={18}/> {formError}
+                days.push(
+                    <div key={i} onClick={() => onAddEvent(dayKey)} className="h-24 md:h-28 border border-gray-100 bg-white hover:bg-blue-50/30 transition-all p-1 cursor-pointer flex flex-col relative group calendar-day">
+                        <span className="text-[10px] font-bold text-gray-400 mb-1">{i}</span>
+                        <div className="flex flex-col gap-1 overflow-y-auto custom-scrollbar flex-1">
+                            {dayEvents.map((ev, idx) => (
+                                <div key={idx} className={`text-[8px] md:text-[9px] px-1 py-0.5 rounded-md truncate leading-tight ${getEventStyle(ev.type)}`}>
+                                    {ev.text}
+                                </div>
+                            ))}
+                        </div>
                     </div>
-                  )}
+                );
+            }
 
-                  <div className="bg-slate-50 p-4 rounded-xl border border-slate-200">
-                    <label className="text-xs font-bold text-slate-500 uppercase block mb-2">Estatus</label>
-                    <select name="status" value={formData.status} onChange={handleInputChange} className="w-full p-2 bg-white border border-slate-300 rounded-lg font-bold text-slate-700">
-                      <optgroup label="Activos">
-                        <option value="Pending">🕒 Pendiente</option>
-                        <option value="In Progress">🎨 En Diseño</option>
-                        <option value="In Review">👀 En Revisión</option>
-                        <option value="Waiting Approval">⏳ En Espera</option>
-                        <option value="On Hold">⏸️ Pausado</option>
-                      </optgroup>
-                      <optgroup label="Cerrados (Mueve a Historial)">
-                        <option value="Approved">✅ Aprobado</option>
-                        <option value="Finalized">🏁 Finalizado</option>
-                      </optgroup>
-                    </select>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Solicitante</label>
-                      <select name="requester" value={formData.requester} onChange={handleInputChange} className="w-full p-3 border rounded-lg"><option>Zignal Agency</option><option>Ventas</option><option>RRHH</option><option>Social</option><option>Gerencia</option></select>
+            return (
+                <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden flex flex-col min-w-[300px]">
+                    <div className="bg-zignal-dark text-white p-2 md:p-3 text-center font-bold capitalize text-sm">{monthName} {year}</div>
+                    <div className="grid grid-cols-7 text-center text-[9px] font-bold uppercase text-gray-400 py-2 border-b bg-gray-50">
+                        <div>Do</div><div>Lu</div><div>Ma</div><div>Mi</div><div>Ju</div><div>Vi</div><div>Sa</div>
                     </div>
-                    <div>
-                      <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Formato</label>
-                      <select name="format" value={formData.format} onChange={handleInputChange} className="w-full p-3 border rounded-lg"><option>Post 1080x1080</option><option>Story 1080x1920</option><option>Carrusel</option><option>Reel</option><option>Impreso</option><option>Web</option><option>PDF</option></select>
+                    <div className="grid grid-cols-7 bg-gray-100 gap-px border-b border-l border-r border-gray-200 flex-1">
+                        {days}
                     </div>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-4">
-                    <div><label className="block text-xs font-bold text-slate-500 uppercase mb-1">Solicitud</label><input type="date" name="dateRequest" value={formData.dateRequest} onChange={handleInputChange} className="w-full p-3 border rounded-lg text-slate-500"/></div>
-                    <div><label className="block text-xs font-bold text-zignal-blue uppercase mb-1">Entrega</label><input type="date" name="deadline" value={formData.deadline} onChange={handleInputChange} className="w-full p-3 border border-zignal-blue/30 rounded-lg text-zignal-blue font-bold"/></div>
-                  </div>
-
-                  <div><label className="block text-xs font-bold text-slate-500 uppercase mb-1">Nombre Campaña</label><input type="text" name="campaignName" value={formData.campaignName} onChange={handleInputChange} className="w-full p-3 border rounded-lg font-bold" placeholder="Ej. Campaña Verano"/></div>
-
-                  <div>
-                    <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Descripción</label>
-                    <textarea name="description" rows="3" value={formData.description} onChange={handleInputChange} className="w-full p-3 border rounded-lg text-sm" placeholder="Detalles..."></textarea>
-                    <button type="button" onClick={handleEnhanceBrief} disabled={isAiGenerating} className="text-xs text-zignal-blue font-bold mt-1 hover:underline">✨ Mejorar con IA</button>
-                  </div>
-
-                  <div className="bg-green-50 p-3 rounded-lg border border-green-100 flex items-center gap-4">
-                    <div className="flex-1"><label className="text-[10px] font-bold text-green-700 uppercase">Costo Extra ($)</label><input type="number" name="price" value={formData.price} onChange={handleInputChange} placeholder="0.00" className="w-full bg-white border border-green-200 rounded p-1 text-green-700 font-mono text-sm"/></div>
-                    <label className="flex items-center gap-2 cursor-pointer mt-4"><input type="checkbox" name="includedInPlan" checked={formData.includedInPlan} onChange={handleInputChange} className="w-4 h-4 accent-zignal-blue"/><span className="text-xs font-bold text-slate-600">Incluido en Fee</span></label>
-                  </div>
-
-                  <div className="flex gap-3 pt-4">
-                    <button type="button" onClick={() => setShowForm(false)} className="flex-1 py-3 bg-white border border-slate-300 rounded-xl font-bold text-slate-600 hover:bg-slate-50">Cancelar</button>
-                    <button type="submit" disabled={isSaving} className="flex-1 py-3 bg-zignal-blue rounded-xl font-bold text-white hover:bg-blue-600 shadow-lg">{isSaving ? 'Guardando...' : 'Guardar'}</button>
-                  </div>
-                </form>
-              </div>
-            </div>
-          )}
-
-          {/* MODAL IA */}
-          {aiModalOpen && (
-            <div className="fixed inset-0 bg-zignal-dark/80 backdrop-blur-sm z-[70] flex items-center justify-center p-4">
-              <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg p-6 animate-fade-in relative">
-                <button onClick={() => setAiModalOpen(false)} className="absolute top-4 right-4 text-slate-400 hover:text-slate-600"><Icon name="X"/></button>
-                <h3 className="text-lg font-black text-slate-800 mb-4 flex items-center gap-2"><Icon name="Sparkles" className="text-purple-500"/> Ideas Generadas</h3>
-                <div className="bg-slate-50 p-4 rounded-lg border border-slate-200 text-sm whitespace-pre-line text-slate-700 max-h-[60vh] overflow-y-auto">
-                  {isAiGenerating ? "Generando..." : aiContent}
                 </div>
-                <button onClick={() => { navigator.clipboard.writeText(aiContent); alert("Copiado!"); }} className="mt-4 w-full py-2 bg-slate-800 text-white rounded-lg font-bold text-sm hover:bg-slate-900">Copiar</button>
-              </div>
+            );
+        };
+
+        // --- Modals ---
+        const ConfirmModal = ({ isOpen, onClose, onConfirm, title, message }) => {
+            if (!isOpen) return null;
+            return (
+                <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 backdrop-blur-sm fade-in p-4">
+                    <div className="bg-white rounded-2xl shadow-xl p-6 w-full max-w-sm border border-gray-100">
+                        <div className="flex items-center gap-3 text-red-600 mb-4">
+                            <Icon name="AlertTriangle" size={24} />
+                            <h3 className="text-lg font-bold text-gray-900">{title}</h3>
+                        </div>
+                        <p className="text-sm text-gray-600 mb-6">{message}</p>
+                        <div className="flex justify-end gap-3">
+                            <button onClick={onClose} className="px-4 py-2 rounded-lg text-gray-700 bg-gray-100 font-medium text-sm">Cancelar</button>
+                            <button onClick={onConfirm} className="px-4 py-2 rounded-lg bg-red-600 text-white font-medium shadow-md text-sm">Eliminar</button>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        const TaskModal = ({ isOpen, onClose, onSave, task = null }) => {
+            const [formData, setFormData] = useState({
+                id: null, dateRequest: new Date().toISOString().split('T')[0], requester: 'Zignal', campaignName: '', 
+                format: 'Post', location: 'Instagram', description: '', referenceLink: '', deadline: '', 
+                includedInPlan: true, price: 0, status: 'Pending', priority: 'Medium'
+            });
+            const [errors, setErrors] = useState({});
+            const [aiLoading, setAiLoading] = useState(false);
+
+            useEffect(() => {
+                if (task) setFormData(task);
+                else setFormData({
+                    id: null, dateRequest: new Date().toISOString().split('T')[0], requester: 'Zignal', campaignName: '', 
+                    format: 'Post', location: 'Instagram', description: '', referenceLink: '', deadline: '', 
+                    includedInPlan: true, price: 0, status: 'Pending', priority: 'Medium'
+                });
+                setErrors({});
+            }, [task, isOpen]);
+
+            const handleChange = (e) => {
+                const { name, value, type, checked } = e.target;
+                setFormData(prev => ({ ...prev, [name]: type === 'checkbox' ? checked : value }));
+                if (errors[name]) setErrors(prev => ({ ...prev, [name]: null }));
+            };
+
+            const validate = () => {
+                const newErrors = {};
+                if (!formData.campaignName.trim()) newErrors.campaignName = "Requerido";
+                if (!formData.deadline) newErrors.deadline = "Requerido";
+                setErrors(newErrors);
+                return Object.keys(newErrors).length === 0;
+            };
+
+            const handleAIImprove = async () => {
+                if (!formData.description) return;
+                setAiLoading(true);
+                const improvedText = await callGemini(`Mejora: ${formData.description}`);
+                setFormData(prev => ({ ...prev, description: prev.description + "\n\n✨ " + improvedText }));
+                setAiLoading(false);
+            };
+
+            if (!isOpen) return null;
+
+            return (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-zignal-dark/80 backdrop-blur-md fade-in p-4 sm:p-6 overflow-y-auto">
+                    <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl border border-gray-200 flex flex-col max-h-[90vh]">
+                        <div className="p-4 border-b border-gray-100 flex justify-between items-center bg-gray-50 rounded-t-2xl">
+                            <h2 className="text-lg font-bold text-zignal-dark flex items-center gap-2">
+                                <Icon name={task ? "FileText" : "PlusCircle"} className="text-zignal-blue" />
+                                {task ? "Editar" : "Nueva Solicitud"}
+                            </h2>
+                            <button onClick={onClose} className="p-2 bg-white rounded-full text-gray-500 shadow-sm"><Icon name="X" size={20} /></button>
+                        </div>
+
+                        <div className="p-4 sm:p-6 overflow-y-auto grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
+                            <div className="space-y-4">
+                                <div>
+                                    <label className="text-xs font-bold text-gray-500 uppercase">Campaña *</label>
+                                    <input type="text" name="campaignName" value={formData.campaignName} onChange={handleChange} className={`w-full px-3 py-2 rounded-lg border ${errors.campaignName ? 'border-red-500' : 'border-gray-200'} mt-1`} placeholder="Nombre..." />
+                                </div>
+                                <div className="grid grid-cols-2 gap-3">
+                                    <div>
+                                        <label className="text-xs font-bold text-gray-500 uppercase">Solicitante</label>
+                                        <select name="requester" value={formData.requester} onChange={handleChange} className="w-full px-2 py-2 rounded-lg border border-gray-200 mt-1 bg-white">
+                                            <option>Zignal</option><option>Dept. Publicidad</option><option>Junta Directiva</option><option>Extra</option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label className="text-xs font-bold text-gray-500 uppercase">Formato</label>
+                                        <select name="format" value={formData.format} onChange={handleChange} className="w-full px-2 py-2 rounded-lg border border-gray-200 mt-1 bg-white">
+                                            <option>Post</option><option>Story</option><option>Reel</option><option>Impreso</option><option>Email</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div className="grid grid-cols-2 gap-3">
+                                    <div>
+                                        <label className="text-xs font-bold text-gray-500 uppercase">Entrega *</label>
+                                        <input type="date" name="deadline" value={formData.deadline} onChange={handleChange} className="w-full px-2 py-2 rounded-lg border border-gray-200 mt-1" />
+                                    </div>
+                                    <div>
+                                        <label className="text-xs font-bold text-gray-500 uppercase">Solicitud</label>
+                                        <input type="date" name="dateRequest" value={formData.dateRequest} onChange={handleChange} className="w-full px-2 py-2 rounded-lg border border-gray-200 mt-1" />
+                                    </div>
+                                </div>
+                                <div>
+                                    <label className="text-xs font-bold text-gray-500 uppercase">Link Referencia</label>
+                                    <input type="url" name="referenceLink" value={formData.referenceLink} onChange={handleChange} className="w-full px-3 py-2 rounded-lg border border-gray-200 mt-1" placeholder="https://..." />
+                                </div>
+                            </div>
+                            <div className="space-y-4">
+                                <div className="grid grid-cols-2 gap-3">
+                                    <div>
+                                        <label className="text-xs font-bold text-gray-500 uppercase">Estatus</label>
+                                        <select name="status" value={formData.status} onChange={handleChange} className="w-full px-2 py-2 rounded-lg border border-gray-200 mt-1 bg-white">
+                                            <option>Pending</option><option>In Progress</option><option>In Review</option><option>Waiting Approval</option><option>On Hold</option><option>Approved</option><option>Finalized</option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label className="text-xs font-bold text-gray-500 uppercase">Prioridad</label>
+                                        <select name="priority" value={formData.priority} onChange={handleChange} className="w-full px-2 py-2 rounded-lg border border-gray-200 mt-1 bg-white">
+                                            <option>Low</option><option>Medium</option><option>High</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div>
+                                    <div className="flex justify-between mb-1">
+                                        <label className="text-xs font-bold text-gray-500 uppercase">Descripción</label>
+                                        <button onClick={handleAIImprove} disabled={aiLoading} className="text-xs text-zignal-blue font-bold flex items-center gap-1"><Icon name="Sparkles" size={12}/> IA</button>
+                                    </div>
+                                    <textarea name="description" rows="4" value={formData.description} onChange={handleChange} className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm"></textarea>
+                                </div>
+                                <div className={`p-3 rounded-lg border ${!formData.includedInPlan ? 'bg-blue-50 border-blue-200' : 'bg-gray-50'}`}>
+                                    <label className="flex items-center justify-between">
+                                        <span className="text-sm font-medium">Incluido en Plan</span>
+                                        <input type="checkbox" name="includedInPlan" checked={formData.includedInPlan} onChange={handleChange} className="w-5 h-5 accent-zignal-blue" />
+                                    </label>
+                                    {!formData.includedInPlan && (
+                                        <div className="mt-2">
+                                            <input type="number" name="price" value={formData.price} onChange={handleChange} className="w-full px-3 py-1.5 rounded border border-blue-300 bg-white" placeholder="Costo extra" />
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+                        <div className="p-4 border-t border-gray-100 flex justify-end gap-3 bg-gray-50 rounded-b-2xl">
+                            <button onClick={onClose} className="px-5 py-2.5 rounded-xl text-gray-600 font-medium">Cancelar</button>
+                            <button onClick={() => { if(validate()) onSave(formData); }} className="px-5 py-2.5 rounded-xl bg-zignal-dark text-white font-medium shadow-lg flex items-center gap-2">
+                                <Icon name="Save" size={18} /> Guardar
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        const StatCard = ({ title, value, icon, colorClass, subtext }) => (
+            <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex items-center justify-between">
+                <div>
+                    <p className="text-gray-500 text-[10px] font-bold uppercase tracking-wider">{title}</p>
+                    <h3 className="text-xl font-bold text-gray-800">{value}</h3>
+                    {subtext && <p className="text-[10px] text-gray-400">{subtext}</p>}
+                </div>
+                <div className={`p-2 rounded-lg ${colorClass} bg-opacity-10 text-opacity-100`}>
+                    <div className={colorClass.replace('bg-', 'text-')}><Icon name={icon} size={20} /></div>
+                </div>
             </div>
-          )}
+        );
 
-        </div>
-      );
-    };
+        // --- Main App ---
+        const App = () => {
+            const [tasks, setTasks] = useState(initialData);
+            const [view, setView] = useState('active');
+            const [isModalOpen, setIsModalOpen] = useState(false);
+            const [currentTask, setCurrentTask] = useState(null);
+            const [deleteModal, setDeleteModal] = useState({ isOpen: false, taskId: null });
+            const [calendarEvents, setCalendarEvents] = useState(initialEvents);
 
-    const root = ReactDOM.createRoot(document.getElementById('root'));
-    root.render(<App />);
+            const filteredTasks = useMemo(() => {
+                const history = ['Approved', 'Finalized'];
+                return tasks.filter(t => view === 'active' ? !history.includes(t.status) : history.includes(t.status));
+            }, [tasks, view]);
 
-  </script>
+            const mergedEvents = useMemo(() => {
+                const combined = { ...calendarEvents };
+                // Asegurar copia profunda de arrays
+                Object.keys(combined).forEach(key => combined[key] = [...combined[key]]);
+                
+                tasks.forEach(t => {
+                    if (t.status === 'Finalized') return;
+                    if (t.dateRequest) {
+                        if (!combined[t.dateRequest]) combined[t.dateRequest] = [];
+                        combined[t.dateRequest].push({ text: `🚀 ${t.campaignName}`, type: 'task-start' });
+                    }
+                    if (t.deadline) {
+                        if (!combined[t.deadline]) combined[t.deadline] = [];
+                        combined[t.deadline].push({ text: `🏁 ${t.campaignName}`, type: 'task-end' });
+                    }
+                });
+                return combined;
+            }, [tasks, calendarEvents]);
+
+            const stats = useMemo(() => {
+                const active = tasks.filter(t => !['Approved', 'Finalized'].includes(t.status)).length;
+                const pending = tasks.filter(t => t.status === 'Pending').length;
+                const high = tasks.filter(t => t.priority === 'High' && !['Approved', 'Finalized'].includes(t.status)).length;
+                const extra = tasks.reduce((acc, c) => acc + (!c.includedInPlan ? parseFloat(c.price || 0) : 0), 0);
+                return { active, pending, high, extra };
+            }, [tasks]);
+
+            return (
+                <div className="min-h-screen">
+                    {/* Header Mobile Friendly */}
+                    <div className="bg-white border-b border-gray-200 sticky top-0 z-30 px-4 py-3 flex justify-between items-center shadow-sm">
+                        <div className="flex items-center gap-2">
+                            <div className="w-8 h-8 bg-zignal-dark rounded flex items-center justify-center text-white"><Icon name="Zap" size={18} /></div>
+                            <h1 className="text-lg font-bold leading-none hidden sm:block">Zignal Agency</h1>
+                        </div>
+                        <div className="flex gap-3">
+                            <div className="w-8 h-8 rounded-full bg-gradient-to-r from-zignal-blue to-zignal-cyan border-2 border-white shadow"></div>
+                        </div>
+                    </div>
+
+                    <div className="max-w-7xl mx-auto p-4 space-y-6">
+                        {/* Stats Mobile Grid */}
+                        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+                            <StatCard title="Activas" value={stats.active} icon="Zap" colorClass="bg-blue-500" />
+                            <StatCard title="Pendientes" value={stats.pending} icon="Clock" colorClass="bg-amber-500" />
+                            <StatCard title="Urgentes" value={stats.high} icon="Flag" colorClass="bg-red-500" />
+                            <StatCard title="Extras" value={`$${stats.extra}`} icon="DollarSign" colorClass="bg-emerald-500" />
+                        </div>
+
+                        {/* Toolbar */}
+                        <div className="flex flex-col sm:flex-row justify-between gap-3 bg-white p-3 rounded-xl border border-gray-200 shadow-sm">
+                            <div className="flex bg-gray-100 p-1 rounded-lg self-start">
+                                <button onClick={() => setView('active')} className={`px-3 py-1.5 rounded-md text-xs font-bold uppercase ${view === 'active' ? 'bg-white shadow-sm' : 'text-gray-500'}`}>Activas</button>
+                                <button onClick={() => setView('history')} className={`px-3 py-1.5 rounded-md text-xs font-bold uppercase ${view === 'history' ? 'bg-white shadow-sm' : 'text-gray-500'}`}>Historial</button>
+                            </div>
+                            <button onClick={() => { setCurrentTask(null); setIsModalOpen(true); }} className="flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-zignal-dark text-white text-sm font-medium shadow-md active:scale-95 transition-transform">
+                                <Icon name="Plus" size={16} /> Nueva Solicitud
+                            </button>
+                        </div>
+
+                        {/* Table Scrollable Container */}
+                        <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                            <div className="overflow-x-auto">
+                                <table className="w-full text-left whitespace-nowrap">
+                                    <thead>
+                                        <tr className="bg-gray-50 text-[10px] text-gray-500 font-bold uppercase border-b">
+                                            <th className="px-4 py-3">Campaña</th>
+                                            <th className="px-4 py-3">Formato</th>
+                                            <th className="px-4 py-3">Entrega</th>
+                                            <th className="px-4 py-3">Estatus</th>
+                                            <th className="px-4 py-3 text-center">Prioridad</th>
+                                            <th className="px-4 py-3 text-right">Acción</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-gray-50 text-sm">
+                                        {filteredTasks.length === 0 ? (
+                                            <tr><td colSpan="6" className="px-4 py-8 text-center text-gray-400">Sin tareas</td></tr>
+                                        ) : filteredTasks.map(t => (
+                                            <tr key={t.id} onClick={() => { setCurrentTask(t); setIsModalOpen(true); }} className="hover:bg-blue-50 active:bg-blue-100 transition-colors cursor-pointer">
+                                                <td className="px-4 py-3">
+                                                    <p className="font-bold text-gray-800">{t.campaignName}</p>
+                                                    <p className="text-xs text-gray-500">{t.requester}</p>
+                                                </td>
+                                                <td className="px-4 py-3 text-gray-600">
+                                                    <div className="flex items-center gap-2">
+                                                        {t.format === 'Reel' ? <Icon name="Video" size={14} /> : <Icon name="Image" size={14} />}
+                                                        <span>{t.location}</span>
+                                                    </div>
+                                                </td>
+                                                <td className="px-4 py-3 font-medium">
+                                                    {new Date(t.deadline).toLocaleDateString('es-ES', {day: '2-digit', month: 'long'})}
+                                                </td>
+                                                <td className="px-4 py-3">
+                                                    <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase border ${
+                                                        t.status === 'Pending' ? 'bg-amber-50 text-amber-700 border-amber-200' : 
+                                                        t.status === 'In Progress' ? 'bg-blue-50 text-blue-700 border-blue-200' :
+                                                        t.status === 'Finalized' ? 'bg-gray-800 text-white border-gray-800' :
+                                                        'bg-green-50 text-green-700 border-green-200'
+                                                    }`}>{t.status}</span>
+                                                </td>
+                                                <td className="px-4 py-3 text-center">
+                                                    <span className={`px-2 py-0.5 rounded text-[10px] font-bold border ${
+                                                        t.priority === 'High' ? 'bg-red-50 text-red-700 border-red-200' : 'bg-green-50 text-green-700 border-green-200'
+                                                    }`}>{t.priority}</span>
+                                                </td>
+                                                <td className="px-4 py-3 text-right">
+                                                    <button onClick={(e) => { e.stopPropagation(); setDeleteModal({ isOpen: true, taskId: t.id }); }} className="p-2 bg-gray-100 rounded text-gray-500 hover:text-red-500">
+                                                        <Icon name="Trash2" size={16} />
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        {/* Calendar Mobile Horizontal Scroll */}
+                        <div>
+                            <h2 className="text-md font-bold text-gray-800 mb-3 flex items-center gap-2"><Icon name="Calendar" size={18} /> Calendario 2026</h2>
+                            <div className="flex gap-4 overflow-x-auto pb-4 snap-x">
+                                <div className="snap-center"><CalendarMonth year={2026} month={1} events={mergedEvents} onAddEvent={(d) => { if(confirm('Agregar evento?')) setCalendarEvents(p => ({...p, [d]: [...(p[d]||[]), {text:'Nota', type:'admin'}]})) }} /></div>
+                                <div className="snap-center"><CalendarMonth year={2026} month={2} events={mergedEvents} onAddEvent={()=>{}} /></div>
+                                <div className="snap-center"><CalendarMonth year={2026} month={3} events={mergedEvents} onAddEvent={()=>{}} /></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <TaskModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} onSave={(d) => {
+                        setTasks(p => d.id ? p.map(t => t.id === d.id ? d : t) : [{...d, id: Date.now()}, ...p]);
+                        setIsModalOpen(false);
+                    }} task={currentTask} />
+                    
+                    <ConfirmModal isOpen={deleteModal.isOpen} onClose={() => setDeleteModal({isOpen:false})} onConfirm={() => {
+                        setTasks(p => p.filter(t => t.id !== deleteModal.taskId));
+                        setDeleteModal({isOpen:false});
+                    }} title="Borrar?" message="No podrás recuperar esta tarea." />
+                </div>
+            );
+        };
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
 </body>
 </html>
-
